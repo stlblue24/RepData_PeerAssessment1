@@ -1,25 +1,393 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
+title: "Reproducible Research: Week 2 Project"
+author: "James Schneider -- schneider.james@gmail.com"
 output: 
   html_document:
     keep_md: true
+    theme: journal
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+    code_folding: hide
 ---
 
+## 1. Loading and Preprocessing the Data {.tabset .tabset-fade .tabset-pills}  
+    
+Please click on the tabs below to review loading the data set into R, viewing the head and tail of the data frame, libraries used for the code, and a quick summary of the data set using the summary function -- <span style="color:#EA6864">summary()</span> -- in base R. In addition, the code chunks can be viewed by clicking the `Code` button to the right of each heading. In the upper right of the document, there is a `Code` drop down option to reveal all code chunks.  
+  
+### Read Data  
+  
+```{r}
+# Reading Data
+activity <- read.csv("activity.csv", header = TRUE, sep = ",", na.strings = "NA")
+# Convert Date
+activity$date <- as.Date(activity$date, "%Y-%m-%d")
+```  
+  
+  
+The `activity.csv` file is loaded into R using `read.csv` and setting `na.strings` to <span style="color:#EA6864">"NA":</span>. The `date` column is then converted to a POSIXct format.  
 
-## Loading and preprocessing the data
+```
+activity <- read.csv("activity.csv", header = TRUE, sep = ",", na.strings = "NA")
+# Convert Date
+activity$date <- as.Date(activity$date, "%Y-%m-%d")
+```  
+  
+The following variables are contained within the data set:  
+  
+* <span style="color:#EA6864">`steps`:</span> Number of steps taking in a 5-minute interval (missing values are coded as <span style="color:#EA6864">NA</span>).  
+* <span style="color:#EA6864">`date`:</span> The date on which the measurement was taken in YYYY-MM-DD format.  
+* <span style="color:#EA6864">`interval`:</span> Identifier for the 5-minute interval in which measurement was taken.  
+  
+### Libraries  
+  
+Below are the libraries used for the data analysis:  
+
+```{r, libraries, message=FALSE}
+# Loading Libraries
+library(knitr)
+library(kableExtra)
+library(dplyr)
+library(ggplot2)
+
+# Library Information Table
+lib_tbl <- data.frame(Libraries = c("knitr", "dplyr", "kableExtra", "ggplot2"),
+                                      LibraryInformation = c("knitr is used to help weave human-readable documents and tangle machine readable code.", 
+                                                            "dplyr provides for easy data manipulation on data frames.",
+                                                            "kableExtra helps in building tables for HTML or LaTeX by using the kable() from the knitr package.",
+                                                            "ggplot2 helps in designing plots, charts, and graphs"))
+
+# Using kableExtra to Build Library Table
+kable(lib_tbl, col.names = c("Library", "Library Details"), caption = "Libraries used in the data analysis") %>%
+  kable_styling(full_width = FALSE, font_size = 14) %>%
+  column_spec(1, bold = T, border_right = T, background = "#F9D5D4", color = "darkslategray") %>%
+  column_spec(2, width = "30em", background = "white") %>%
+  row_spec(0, background = "#EA6864", color = "white")
+```
+
+
+### Head: activity  
+  
+```{r, head, results='asis'}
+# Buliding Table
+kable(head(activity, 10), align = c("l", "l", "c"), col.names = c("Steps", "Date", "Interval"), row.names = TRUE, caption = "First 10 columns from the activity data frame") %>%
+  kable_styling(bootstrap_options = "condensed", full_width = FALSE, font_size = 14) %>%
+  row_spec(row = 0, background = "#EA6864", color = "white", hline_after = TRUE) %>%
+  column_spec(c(1:3), width = "10em") %>%
+  column_spec(2, border_left = TRUE) %>%
+  column_spec(1, background = "#F9D5D4", color = "darkslategray", width = "4em")
+```
+
+### Tail: activity  
+  
+```{r, tail, results='asis'}
+kable(tail(activity, 10), align = c("l", "l", "c"), col.names = c("Steps", "Date", "Interval"), row.names = TRUE, caption = "Last 10 columns from the activity data frame") %>%
+  kable_styling(bootstrap_options = "condensed", full_width = FALSE, font_size = 14) %>%
+  row_spec(row = 0, background = "#EA6864", color = "white") %>%
+  column_spec(c(1:3), width = "10em") %>%
+  column_spec(2, border_left = TRUE) %>%
+  column_spec(1, background = "#F9D5D4", color = "darkslategray", width = "4em")
+```
+
+### Summary  
+  
+The `activity` data frame has dimensions of __<span style="color:#EA6864">17,568</span>__ __observations__ and __<span style="color:#EA6864">3</span>__ __columns__. There are __<span style="color:#EA6864">2,304</span>__ __missing elements__ in the `steps` column.  
+  
+```{r, summary table}
+kable(summary(activity), col.names = c("Steps", "Date", "Interval"), caption = "Summary of activity data frame") %>%
+  kable_styling(bootstrap_options = "condensed", font_size = 14) %>%
+  row_spec(row = 0, background = "#EA6864", color = "white")
+```
+
+***
+
+## 2. What is mean total number of steps taken per day?{.tabset .tabset-fade .tabset-pills}  
+  
+The following tabs will show:  
+  
+1. Calculation of the total number of steps taken per day.    
+2. Histogram of the total number of steps taken each day.  
+3. Calculation and report of the mean and median of the total number of steps taken per day.  
+
+  
+### Calculating Steps Per Day  
+  
+
+```{r, meanSteps, echo=TRUE}
+# Using dplyr package to group by date, filter our NAs and summarize total steps
+totalSteps <- activity %>%
+  group_by(date) %>%
+  filter(!is.na(steps)) %>%
+  summarize(TotalSteps = sum(steps))
+# Mean for Output of the inline code
+meanSteps <- mean(totalSteps$TotalSteps)
+# Getting rid of scientific notation
+inline_hook <- function(x) {
+  if (is.numeric(x)) {
+    format(x, digits = 2)
+  } else x
+}
+# Using knitr and setting inline output
+knitr::knit_hooks$set(inline = inline_hook)
+```
+
+__<span style="color:#EA6864">Calculation Formula Below:</span>__
+```
+totalSteps <- activity %>%
+  group_by(date) %>%
+  filter(!is.na(steps)) %>%
+  summarize(TotalSteps = sum(steps))
+
+meanSteps <- mean(totalSteps$TotalSteps)
+```
+
+The mean of total steps taken per day is __<span style="color:#EA6864">`r meanSteps`</span>__.  
+
+### Histogram  
+  
+```{r, histogram}
+# Histogram of Total Steps Per Day
+par(family = "Font Awesome 5 Free", font = 1, col.main = "#EA6864", col.lab = "#777778")
+hist(totalSteps$TotalSteps, 
+     breaks = 10, 
+     col = "#EA6864", 
+     border = "whitesmoke",
+     main = "Number of Steps Taken Per Day", 
+     xlab = "Total Steps")
+rug(totalSteps$TotalSteps, col = "firebrick4")
+```
+
+
+### Mean/Median Total Steps Per Day
+
+```{r, mean_median, results='asis'}
+# Buliding Data frame
+mean.med.tbl <- data.frame(c("Mean", "Median"), c(mean(totalSteps$TotalSteps), median((totalSteps$TotalSteps))))
+# Table Output using kableExtra
+kable(mean.med.tbl, align = c("l", "l"), col.names = c("Total Steps Per Day", "")) %>%
+  kable_styling(bootstrap_options = "condensed", full_width = FALSE) %>%
+  row_spec(row = 0, background = "#EA6864", color = "white", hline_after = TRUE)
+```
+
+***
+
+## 3. What is the average daily activity pattern? {.tabset .tabset-fade .tabset-pills}  
+  
+In this section, the following tabs focus on:  
+  
+1. A time series plot of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis).      
+2. Identifying which 5-minute interval, on average across all the days in the data set, contains the maximum number of steps.    
+  
+### Time Series Plot  
+
+Below shows a Time Series Plot between the 5-minute intervals and the average number of steps taken across all days.  
+
+
+```{r, activity pattern plot}
+# Find the Mean accross intervals
+avgSteps <- activity %>%
+  group_by(interval) %>%
+  summarize(AvgDailyInterval = round(mean(steps, na.rm = TRUE), 2))
+
+# Construct Plot
+ggplot(avgSteps, aes(x = interval, y = AvgDailyInterval)) +
+  geom_line(color = "#EA6864", size = 1) +
+  theme_minimal(base_family = "Font Awesome 5 Free") +
+  theme(axis.title = element_text(color = "#777778"),
+        plot.title = element_text(color = "#EA6864", face = "bold")) +
+  labs(title = "Average Daily Activity Pattern") +
+  xlab("5-Minute Interval") +
+  ylab("Mean Steps Taken") +
+  geom_point(x = 835, y = 206.1698, inherit.aes = TRUE, color = "firebrick4", size = 3) +
+  annotate("text", x = 1150, y = 206.1698, label = "Max Interval is 835", color = "#777778", size = 4)
+```
+
+
+### Max 5-Min Interval  
+
+The time series plot shows a spike of over 200+ steps. The following calculation and table below shows the details of the specific 5-minute interval spike:  
+
+```
+max.interval <- avgSteps[which.max(avgSteps$AvgDailyInterval),]
+```  
+
+```{r, max interval}
+# Calculate Max Interval with which.max()
+max.interval <- avgSteps[which.max(avgSteps$AvgDailyInterval),]
+# Output table
+kable(max.interval, col.names = c("Max Interval", "Average Steps"), align = "c") %>%
+  kable_styling(bootstrap_options = "condensed", full_width = FALSE) %>%
+  row_spec(row = 0, background = "#EA6864", color = "white")
+```
+
+
+## 4. Imputing missing values {.tabset .tabset-fade .tabset-pills}  
+  
+Note that there are a number of days/intervals where there are missing values (coded as <span style="color:#EA6864">NA</span>). The presence of missing days may introduce bias into some calculations or summaries of the data. The following tabs will:  
+
+1. Calculate and report the total number of missing values in the data set (i.e. the total number of rows with <span style="color:#EA6864">NAs</span>).  
+2. Devise a strategy for filling in all of the missing values in the data set. The strategy formulated will use the mean for each 5-minute interval.  
+3. Create a new data set that is equal to the original data set but with the missing data filled in.  
+4. Make a histogram of the total number of steps taken each day and report the mean and median total number of steps taken per day.  
+  
+### Missing Rows
+```{r, find missing rows}
+# Using complete cases() to find all missing rows
+activity.comp <- activity[complete.cases(activity),]
+# Subtracting original data frame rows from complete cases data frame rows to get total number of missing NA rows
+missing.rows <- nrow(activity) - nrow(activity.comp)
+```
+  
+The following will calculate the total number rows with missing values (coded as <span style="color:#EA6864">NA</span>):  
+
+```
+activity.comp <- activity[complete.cases(activity),]
+missing.rows <- nrow(activity) - nrow(activity.comp)
+```  
+
+There are a total of __<span style="color:#EA6864">`r missing.rows`</span>__ missing rows with <span style="color:#EA6864">NA</span> in the original data set.  
+
+### Impute NAs  
+  
+  
+```{r, warning=FALSE}
+activity.impute <- activity
+activity.impute$steps[is.na(activity.impute$steps)] <- avgSteps$AvgDailyInterval[match(activity.impute$interval, avgSteps$interval)]
+```
+  
+  
+The <span style="color:#EA6864">NA</span> values in the `steps` variable are replaced with the interval mean and stored into a new data frame `activity.impute`. The mean for each interval has already been calculated and stored in the data frame `avgSteps`. The following code will use the `match()` to match the mean interval value to the missing <span style="color:#EA6864">NAs</span> in the `steps` column.  
+
+Below is the code:  
+
+```
+activity.impute <- activity
+activity.impute$steps[is.na(activity.impute$steps)] <- avgSteps$AvgDailyInterval[match(activity.impute$interval, avgSteps$interval)]
+```
+  
+### Histogram: Imputed Values  
+  
+```{r, hist impute}
+# Calculating Total Number of Steps
+imputeTotalSteps <- activity.impute %>%
+  group_by(date) %>%
+  summarize(TotalSteps = sum(steps), MeanSteps = mean(steps), MedianSteps = median(steps))
+
+# Histogram of Total Steps Per Day
+par(family = "Font Awesome 5 Free", font = 1, col.main = "#EA6864", col.lab = "#777778")
+hist(imputeTotalSteps$TotalSteps, 
+     breaks = 10, 
+     col = "#EA6864", 
+     border = "whitesmoke",
+     main = "Number of Steps Taken Per Day with Imputed Values", 
+     xlab = "Total Steps")
+rug(imputeTotalSteps$TotalSteps, col = "firebrick4")
+```
+
+### Imputed Mean/Median  
+  
+When imputing the _<span style="color:#EA6864">mean</span>_ of the 5-minute intervals, there is no difference of the mean between the original data frame and with the imputed data frame. The mean remains the same at __<span style="color:#EA6864">10,766</span>__ steps.  
+  
+The _<span style="color:#EA6864">median</span>_ between the original and imputed data frames does change slightly going from __<span style="color:#EA6864">10,765</span>__ steps to __<span style="color:#EA6864">10,766</span>__. Lastly, the total number of steps taken does increase quite significantly. Please see the table below:  
+
+  
+```{r}
+kable(data.frame(Value = c("Mean", "Median", "Total Steps"), 
+                 Org = c(mean(totalSteps$TotalSteps), median(totalSteps$TotalSteps), sum(totalSteps$TotalSteps)), 
+                 Impute = c(mean(imputeTotalSteps$TotalSteps), median(imputeTotalSteps$TotalSteps), 
+                            sum(imputeTotalSteps$TotalSteps))), 
+      col.names = c("", "Original Data Set", "Imputed Data Set"), align = c("l", "c", "c")) %>%
+  kable_styling(bootstrap_options = "condensed", full_width = FALSE) %>%
+  row_spec(row = 0, background = "#EA6864", color = "white")
+```
+
+
+## 5. Are there differences in activity patterns between weekdays and weekends?{.tabset .tabset-fade .tabset-pills}  
+
+For this part the weekdays function -- <span style="color:#EA6864">weekdays()</span> -- may be of some help here. This function will be used with the <span style="color:#EA6864">imputed data set</span>. The tabs will show:  
+
+1. A new factor variable in the data set with two levels – __<span style="color:#EA6864">“weekday”</span>__ and __<span style="color:#EA6864">“weekend”</span>__ indicating whether a given date is a weekday or weekend day.    
+2. A panel plot containing a time series plot of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis).  
+  
+### Factor Variable    
+  
+```{r}
+weekdays <- activity.impute %>%
+  mutate(Weekday = weekdays(date)) %>%
+  mutate(Weekday = factor(Weekday, levels = unique(Weekday),
+                           labels = c("Weekday", "Weekday", "Weekday", "Weekday", "Weekday", "Weekend", "Weekend")))
+```  
+  
+  
+The following code will create a new data frame `weekdays` using the `activity.impute` data frame and create new column `Weekday` with factor levels and labels titled <span style="color:#EA6864">weekday</span> if the `date` falls on a Monday-Friday and <span style="color:#EA6864">weekend</span> if the date falls on a Saturday or Sunday.  
+  
+Below is the code:  
+
+```
+weekdays <- activity.impute %>%
+  mutate(Weekday = weekdays(date)) %>%
+  mutate(Weekday = factor(Weekday, levels = unique(Weekday),
+                           labels = c("Weekday", "Weekday", "Weekday", "Weekday", "Weekday", "Weekend", "Weekend")))
+```  
+  
+### Panel Time Series  
+  
+```{r}
+# Filter Data Set
+weekdaysGroup <- weekdays %>%
+  group_by(interval, Weekday) %>%
+  summarise(MeanSteps = mean(steps))
+
+weekend <- weekdaysGroup %>%
+  filter(Weekday == "Weekend")
+weekend <- weekend[which.max(weekend$MeanSteps),]
+
+weekday <- weekdaysGroup %>%
+  filter(Weekday == "Weekday")
+weekday <- weekday[which.max(weekday$MeanSteps),]
+
+ggplot(weekdaysGroup, aes(interval, MeanSteps, color = Weekday, fill = Weekday)) +
+  facet_grid(Weekday ~., ) +
+  geom_line() + 
+  geom_smooth(method = "loess") +
+  theme_minimal(base_family = "Font Awesome 5 Free") +
+  theme(axis.title = element_text(color = "#777778"),
+        plot.title = element_text(color = "#EA6864", face = "bold")) +
+  labs(title = "Daily Activity Pattern Weekday vs Weekend") +
+  xlab("5-Minute Interval") +
+  ylab("Mean Steps Taken") +
+  theme(strip.background = element_rect(fill = "whitesmoke", color = FALSE),
+        strip.text = element_text(color = "#777778")) +
+  geom_point(data = weekend, aes(x = interval, y = MeanSteps)) +
+  geom_point(data = weekday, aes(x = interval, y = MeanSteps)) 
+  
+
+```
+
+__<span style="color:#EA6864">Max Intervals of Weekday vs Weekend:</span>__  
+  
+
+```{r}
+weekend <- weekdaysGroup %>%
+  filter(Weekday == "Weekend")
+weekend <- weekend[which.max(weekend$MeanSteps),]
+
+weekday <- weekdaysGroup %>%
+  filter(Weekday == "Weekday")
+weekday <- weekday[which.max(weekday$MeanSteps),]
+
+daytbl <- weekend
+daytbl <- rbind(weekend, weekday)
+daytbl <- daytbl %>%
+  mutate(MeanSteps = round(MeanSteps, 0)) %>%
+  select(Weekday, interval, MeanSteps)
+
+kable(daytbl, col.names = c("", "Max Interval", "Mean Steps"), caption = "Max Interval Weekend vs Weekend") %>%
+  kable_styling(bootstrap_options = "condensed", full_width = FALSE) %>%
+  row_spec(0, background = "#EA6864", color = "white")
+
+```
 
 
 
-## What is mean total number of steps taken per day?
 
-
-
-## What is the average daily activity pattern?
-
-
-
-## Imputing missing values
-
-
-
-## Are there differences in activity patterns between weekdays and weekends?
